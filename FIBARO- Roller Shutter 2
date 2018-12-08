@@ -12,9 +12,8 @@
  *
  */
 metadata {
-    definition (name: "Fibaro Roller Shutter 2", namespace: "FibarGroup", author: "Fibar Group") {
-        capability "Window Shade"
-        capability "Garage Door Control"
+    definition (name: "Fibaro Roller Shutter 2", namespace: "SmartThings", author: "Fibar Group") {
+        capability "Window Shade"        
         capability "Energy Meter"
         capability "Power Meter"
         capability "Configuration"
@@ -24,7 +23,7 @@ metadata {
         command "refresh"
         command "calibrate"
         command "stop"
-        command "setPosition"
+        command "setLevel"
         command "setSlats"
 
         attribute "position", "number"
@@ -48,7 +47,7 @@ metadata {
                 attributeState("multiStatus", label:'${currentValue}')
             }
             tileAttribute ("device.position", key: "SLIDER_CONTROL") {
-                attributeState "position", action:"setPosition"
+                attributeState "position", action:"setLevel"
             }
         }
         valueTile("power", "device.power", decoration: "flat", width: 2, height: 2) {
@@ -63,12 +62,7 @@ metadata {
         valueTile("calibrate", "device.calibrate", decoration: "flat", width: 2, height: 1) {
             state "calibrate", label:'Calibrate', action:"calibrate"
         }
-        valueTile("slatsText", "device.slats", decoration: "flat", width: 2, height: 1) {
-            state "slats", label:'Slats:'
-        }
-        controlTile("slats", "device.slats", "slider", range:"(0..100)", height: 1, width: 2) {
-            state "slats", label:'slats', action:"setSlats"
-        }
+
     }
 
     preferences {
@@ -100,26 +94,46 @@ metadata {
                     required: false
             )
         }
+        input name: "invert", type: "bool", title: "Invert up/down", description: "Invert up and down actions"
+        input name: "openOffset", type: "decimal", title: "Open offset", description: "The percentage from which shutter is displayerd as open"
+        input name: "closeOffset", type: "decimal", title: "Close offset", description: "The percentage from which shutter is displayerd as close"
+        input name: "offset", type: "decimal", title: "offset", description: "This offset allow to correct the value returned by the device so it match real value"
 
         input ( name: "logging", title: "Logging", type: "boolean", required: false )
     }
 }
 
-def open() { setFibaro(99,99) }
+def open() { 
+	logging("${device.displayName} - Executing Open","info") 
+	setFibaro(99,99)     
+}
 
-def close() { setFibaro(0,0) }
+def close() { 
+	logging("${device.displayName} - Executing Close","info") 
+	setFibaro(0,0) 
+}
 
 def stop() { encap(zwave.switchMultilevelV3.switchMultilevelStopLevelChange()) }
 
 def calibrate() { encap(zwave.configurationV2.configurationSet(configurationValue: intToParam(1, 1), parameterNumber: 29, size: 1)) }
 
-def setPosition(Integer value) {
+
+def correctLevel(Integer value) {
+    Integer result = value
+    result = result - (offset ?: 0)
+    if (invert) {
+        result = 100 - result
+    }
+    return result
+}
+
+def setLevel(valuex) {
+	def value = correctLevel(valuex.toInteger())
+	logging("${device.displayName} - Executing Set Position $value","info") 
     if (device.currentValue("position") > value) {
         sendEvent(name: "windowShade", value: "closing");
-        sendEvent(name: "garageDoorControl", value: "closing");
     } else if (device.currentValue("position") < value) {
         sendEvent(name: "windowShade", value: "opening");
-        sendEvent(name: "garageDoorControl", value: "opening");
     }
     setFibaro((value > 0) ? value-1 : 0, null)
 }
@@ -375,20 +389,29 @@ def parseFibaro(map) {
             if (val1 <= 99) { sendEvent(name: "position", value: (val1 > 0) ? val1+1 : 0 , displayed: false) }
             break
     }
-    switch (val1) {
-        case 0:
+    /*switch (val1) {
+        case 0:        	
             sendEvent(name: "windowShade", value: "closed");
-            sendEvent(name: "garageDoorControl", value: "closed", displayed: false);
             break;
         case 99..255:
             sendEvent(name: "windowShade", value: "open");
-            sendEvent(name: "garageDoorControl", value: "open", displayed: false);
             break;
         default:
-            sendEvent(name: "windowShade", value: "partially open");
-            sendEvent(name: "garageDoorControl", value: "partially open", displayed: false);
+           	sendEvent(name: "windowShade", value: "partially open");
             break;
+    }*/
+    
+   	logging("${device.displayName} - Opened Value $val1")
+	if (val1 >= (openOffset ?: 95)) {
+    	sendEvent(name: "windowShade", value: "open");
     }
+    else if  (val1 <= (closeOffset ?: 5)) {
+    	sendEvent(name: "windowShade", value: "closed");
+    }else{
+    	sendEvent(name: "windowShade", value: "partially open");
+    }
+    
+    
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
