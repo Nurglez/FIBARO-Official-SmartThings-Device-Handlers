@@ -12,7 +12,7 @@
  *
  */
 metadata {
-    definition (name: "Fibaro Door/Window Sensor 2 ZW5", namespace: "FibarGroup", author: "Fibar Group") {
+    definition (name: "Fibaro Door/Window Sensor 2 ZW5", namespace: "fibaro_smartthings", author: "Fibar Group") {
         capability "Contact Sensor"
         capability "Tamper Alert"
         capability "Temperature Measurement"

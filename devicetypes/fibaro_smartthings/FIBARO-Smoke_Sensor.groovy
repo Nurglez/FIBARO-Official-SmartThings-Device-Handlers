@@ -12,7 +12,7 @@
  *
  */
 metadata {
-    definition (name: "Fibaro Smoke Sensor ZW5", namespace: "FibarGroup", author: "Fibar Group") {
+    definition (name: "Fibaro Smoke Sensor ZW5", namespace: "fibaro_smartthings", author: "Fibar Group") {
         capability "Battery"
         capability "Configuration"
         capability "Sensor"

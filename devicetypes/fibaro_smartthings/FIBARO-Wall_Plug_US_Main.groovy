@@ -1,5 +1,5 @@
 /**
- *  FIBARO Wall Plug EU ZW5
+ *  Fibaro Wall Plug ZW5
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -12,7 +12,7 @@
  *
  */
 metadata {
-    definition (name: "Fibaro Wall Plug EU ZW5", namespace: "FibarGroup", author: "Fibar Group") {
+    definition (name: "Fibaro Wall Plug US ZW5", namespace: "fibaro_smartthings", author: "Fibar Group") {
         capability "Switch"
         capability "Energy Meter"
         capability "Power Meter"
@@ -22,17 +22,16 @@ metadata {
         command "reset"
         command "refresh"
 
-        fingerprint mfr: "010F", prod: "0602"
-        fingerprint deviceId: "0x1001", inClusters:"0x5E,0x22,0x59,0x56,0x7A,0x32,0x71,0x73,0x98,0x31,0x85,0x70,0x72,0x5A,0x8E,0x25,0x86"
-        fingerprint deviceId: "0x1001", inClusters:"0x5E,0x22,0x59,0x56,0x7A,0x32,0x71,0x73,0x31,0x85,0x70,0x72,0x5A,0x8E,0x25,0x86"
-
+        fingerprint mfr: "010F", prod: "1401"
+        fingerprint deviceId: "0x2000", inClusters:"0x5E,0x22,0x59,0x56,0x7A,0x32,0x71,0x73,0x98,0x31,0x85,0x70,0x72,0x5A,0x8E,0x25,0x86"
+        fingerprint deviceId: "0x2000", inClusters:"0x5E,0x22,0x59,0x56,0x7A,0x32,0x71,0x73,0x31,0x85,0x70,0x72,0x5A,0x8E,0x25,0x86"
     }
 
     tiles (scale: 2) {
         multiAttributeTile(name:"switch", type: "lighting", width: 3, height: 4, canChangeIcon: true){
             tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
-                attributeState "off", label: 'Off', action: "switch.on", icon: "https://s3-eu-west-1.amazonaws.com/fibaro-smartthings/wallplug/plug0.png", backgroundColor: "#ffffff"
-                attributeState "on", label: 'On', action: "switch.off", icon: "https://s3-eu-west-1.amazonaws.com/fibaro-smartthings/wallplug/plug2.png", backgroundColor: "#00a0dc"
+                attributeState "off", label: 'Off', action: "switch.on", icon: "https://s3-eu-west-1.amazonaws.com/fibaro-smartthings/wallPlugUS/plug_us_off.png", backgroundColor: "#ffffff"
+                attributeState "on", label: 'On', action: "switch.off", icon: "https://s3-eu-west-1.amazonaws.com/fibaro-smartthings/wallPlugUS/plug_us_blue.png", backgroundColor: "#00a0dc"
             }
             tileAttribute("device.multiStatus", key:"SECONDARY_CONTROL") {
                 attributeState("multiStatus", label:'${currentValue}')
@@ -52,10 +51,10 @@ metadata {
     preferences {
 
         input (
-                title: "Fibaro Wall Plug EU ZW5 manual",
+                title: "Fibaro Wall Plug manual",
                 description: "Tap to view the manual.",
-                image: "http://manuals.fibaro.com/wp-content/uploads/2017/02/wp_icon.png",
-                url: "http://manuals.fibaro.com/content/manuals/en/FGWPEF-102/FGWPEF-102-EN-A-v2.0.pdf",
+                image: "https://s3-eu-west-1.amazonaws.com/fibaro-smartthings/wallPlugUS/plug_us_blue.png",
+                //url: "http://manuals.fibaro.com/content/manuals/en/FGWPEF-102/FGWPEF-102-EN-A-v2.0.pdf",
                 type: "href",
                 element: "href"
         )
@@ -71,7 +70,7 @@ metadata {
             input (
                     name: it.key,
                     title: null,
-                    description: "Default: $it.def" ,
+                    description: it.defValDescr,
                     type: it.type,
                     options: it.options,
                     range: (it.min != null && it.max != null) ? "${it.min}..${it.max}" : null,
@@ -84,45 +83,75 @@ metadata {
     }
 }
 
+def test(options, defValue){
+    def mapToString = "$options"
+    def stringToList = mapToString.split(',').collect{it as String}
+    def result = stringToList.get(0).substring(3)
+    return result
+}
+
 //UI and tile functions
 def on() {
-    encap(zwave.basicV1.basicSet(value: 255))
+    log.warn "on"
+    sendEvent(name: "switch", value: "on", isStateChange: true, displayed: false)
+    encap(zwave.basicV1.basicSet(value: 0xFF))
 }
 
 def off() {
+    log.warn "off"
+    sendEvent(name: "switch", value: "off", isStateChange: true, displayed: false)
     encap(zwave.basicV1.basicSet(value: 0))
+
 }
 
 def reset() {
     def cmds = []
-    cmds << zwave.meterV3.meterReset()
-    cmds << zwave.meterV3.meterGet(scale: 0)
-    cmds << zwave.meterV3.meterGet(scale: 2)
+    cmds << [zwave.meterV3.meterReset(), 1]
+    cmds << [zwave.meterV3.meterGet(scale: 0), 1]
+    cmds << [zwave.meterV3.meterGet(scale: 2), 1]
     encapSequence(cmds,1000)
 }
 
 def refresh() {
     def cmds = []
-    cmds << zwave.meterV3.meterGet(scale: 0)
-    cmds << zwave.meterV3.meterGet(scale: 2)
-    cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType: 4)
+    cmds << [zwave.meterV3.meterGet(scale: 0), 1]
+    cmds << [zwave.meterV3.meterGet(scale: 2), 1]
     encapSequence(cmds,1000)
+}
+
+def childReset(){
+    def cmds = []
+    cmds << response(encap(zwave.meterV3.meterReset(), 2))
+    cmds << response(encap(zwave.meterV3.meterGet(scale: 0), 2))
+    cmds << response(encap(zwave.meterV3.meterGet(scale: 2), 2))
+    sendHubCommand(cmds,1000)
+}
+
+def childRefresh(){
+    def cmds = []
+    cmds << response(encap(zwave.meterV3.meterGet(scale: 0), 2))
+    cmds << response(encap(zwave.meterV3.meterGet(scale: 2), 2))
+    sendHubCommand(cmds,1000)
 }
 
 //Configuration and synchronization
 def updated() {
     if ( state.lastUpdated && (now() - state.lastUpdated) < 500 ) return
     def cmds = []
-    logging("Executing updated()","info")
-
+    log.warn "Executing updated"
+    if (!childDevices) {
+        createChildDevices()
+    }
     if (device.currentValue("numberOfButtons") != 6) { sendEvent(name: "numberOfButtons", value: 6) }
-
     state.lastUpdated = now()
     syncStart()
 }
 
 def configure() {
-    encap(zwave.basicV1.basicSet(value: 0))
+    def cmds = []
+    cmds << zwave.multiChannelAssociationV2.multiChannelAssociationGet(groupingIdentifier:1)
+    cmds << zwave.basicV1.basicSet(value: 0)
+    encapSequence(cmds,1000)
 }
 
 private syncStart() {
@@ -152,6 +181,7 @@ private syncNext() {
         if ( state."$param.key"?.value != null && state."$param.key"?.state in ["notSynced","inProgress"] ) {
             multiStatusEvent("Sync in progress. (param: ${param.num})", true)
             state."$param.key"?.state = "inProgress"
+
             cmds << response(encap(zwave.configurationV2.configurationSet(configurationValue: intToParam(state."$param.key".value, param.size), parameterNumber: param.num, size: param.size)))
             cmds << response(encap(zwave.configurationV2.configurationGet(parameterNumber: param.num)))
             break
@@ -191,12 +221,30 @@ private syncCheck() {
     }
 }
 
+private createChildDevices() {
+    logging("${device.displayName} - executing createChildDevices()","info")
+    addChildDevice(
+            "Fibaro Wall Plug USB",
+            "${device.deviceNetworkId}-2",
+            null,
+            [completedSetup: true, label: "${device.displayName} (CH2)", isComponent: false, componentName: "ch2", componentLabel: "Channel 2"]
+    )
+}
+
+private physicalgraph.app.ChildDeviceWrapper getChild(Integer childNum) {
+    return childDevices.find({ it.deviceNetworkId == "${device.deviceNetworkId}-${childNum}" })
+}
+
 private multiStatusEvent(String statusValue, boolean force = false, boolean display = false) {
     if (!device.currentValue("multiStatus")?.contains("Sync") || device.currentValue("multiStatus") == "Sync OK." || force) {
         sendEvent(name: "multiStatus", value: statusValue, descriptionText: statusValue, displayed: display)
     }
 }
 
+private ch2MultiStatusEvent(String statusValue, boolean force = false, boolean display = false) {
+    getChild(2)?.sendEvent(name: "multiStatus", value: statusValue, descriptionText: statusValue, displayed: display)
+
+}
 //event handlers related to configuration and sync
 def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport cmd) {
     def paramKey = parameterMap().find( {it.num == cmd.parameterNumber } ).key
@@ -215,33 +263,52 @@ def zwaveEvent(physicalgraph.zwave.commands.applicationstatusv1.ApplicationRejec
     }
 }
 
+def zwaveEvent(physicalgraph.zwave.commands.multichannelassociationv2.MultiChannelAssociationReport cmd) {
+    def cmds = []
+    if (cmd.groupingIdentifier == 1) {
+        if (cmd.nodeId != [0, zwaveHubNodeId, 1]) {
+            log.debug "${device.displayName} - incorrect MultiChannel Association for Group 1! nodeId: ${cmd.nodeId} will be changed to [0, ${zwaveHubNodeId}, 1]"
+            cmds << zwave.multiChannelAssociationV2.multiChannelAssociationRemove(groupingIdentifier: 1)
+            cmds << zwave.multiChannelAssociationV2.multiChannelAssociationSet(groupingIdentifier: 1, nodeId: [0,zwaveHubNodeId,1])
+        } else {
+            logging("${device.displayName} - MultiChannel Association for Group 1 correct.","info")
+        }
+    }
+    if (cmds) { [response(encapSequence(cmds, 1000))] }
+}
+
 //event handlers
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
     //ignore
 }
 
-def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
+def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep=null) {
+    log.warn "SwitchBinaryReport"
     logging("${device.displayName} - SwitchBinaryReport received, value: ${cmd.value}","info")
     sendEvent([name: "switch", value: (cmd.value == 0 ) ? "off": "on"])
 }
 
-def zwaveEvent(physicalgraph.zwave.commands.sensormultilevelv5.SensorMultilevelReport cmd) {
-    logging("${device.displayName} - SensorMultilevelReport received, value: ${cmd.scaledSensorValue} scale: ${cmd.scale}","info")
-    if (cmd.sensorType == 4) {
-        sendEvent([name: "power", value: cmd.scaledSensorValue, unit: "W"])
+def zwaveEvent(physicalgraph.zwave.commands.meterv3.MeterReport cmd, ep=null) {
+    log.warn "${device.displayName} - MeterReport received, value: ${cmd.scaledMeterValue} scale: ${cmd.scale} ep: $ep"
+    if (ep==1) {
+        log.warn "chanell1"
+        switch (cmd.scale) {
+            case 0: sendEvent([name: "energy", value: cmd.scaledMeterValue, unit: "kWh"]); break;
+            case 2: sendEvent([name: "power", value: cmd.scaledMeterValue, unit: "W"]); break;
+        }
         if (device.currentValue("energy") != null) {multiStatusEvent("${device.currentValue("power")} W / ${device.currentValue("energy")} kWh")}
         else {multiStatusEvent("${device.currentValue("power")} W / 0.00 kWh")}
     }
-}
 
-def zwaveEvent(physicalgraph.zwave.commands.meterv3.MeterReport cmd) {
-    logging("${device.displayName} - MeterReport received, value: ${cmd.scaledMeterValue} scale: ${cmd.scale}","info")
-    switch (cmd.scale) {
-        case 0: sendEvent([name: "energy", value: cmd.scaledMeterValue, unit: "kWh"]); break;
-        case 2: sendEvent([name: "power", value: cmd.scaledMeterValue, unit: "W"]); break;
+    if (ep==2) {
+        log.warn "chanell2"
+        switch (cmd.scale) {
+            case 0: getChild(2)?.sendEvent([name: "energy", value: cmd.scaledMeterValue, unit: "kWh"]); break;
+            case 2: getChild(2)?.sendEvent([name: "power", value: cmd.scaledMeterValue, unit: "W"]); break;
+        }
+        if (device.currentValue("energy") != null) {ch2MultiStatusEvent("${getChild(2)?.currentValue("power")} W / ${getChild(2)?.currentValue("energy")} kWh")}
+        else {ch2MultiStatusEvent("${getChild(2)?.currentValue("power")} W / 0.00 kWh")}
     }
-    if (device.currentValue("energy") != null) {multiStatusEvent("${device.currentValue("power")} W / ${device.currentValue("energy")} kWh")}
-    else {multiStatusEvent("${device.currentValue("power")} W / 0.00 kWh")}
 }
 
 /*
@@ -293,6 +360,33 @@ def zwaveEvent(physicalgraph.zwave.commands.crc16encapv1.Crc16Encap cmd) {
     }
 }
 
+def zwaveEvent(physicalgraph.zwave.commands.securityv1.SecurityCommandsSupportedReport cmd) {
+    log.debug "SecurityCommandsSupportedReport"
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.securityv1.NetworkKeyVerify cmd){
+    log.debug "NetworkKeyVerify"
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.securityv1.SecuritySchemeReport cmd){
+    log.debug "SecuritySchemeReport"
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.applicationstatusv1.ApplicationBusy cmd) {
+    log.debug "ApplicationBusy"
+}
+
+
+def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
+    def encapsulatedCommand = cmd.encapsulatedCommand(cmdVersions())
+    if (encapsulatedCommand) {
+        logging("${device.displayName} - Parsed MultiChannelCmdEncap ${encapsulatedCommand}")
+        zwaveEvent(encapsulatedCommand, cmd.sourceEndPoint as Integer)
+    } else {
+        log.warn "Unable to extract MultiChannel command from $cmd"
+    }
+}
+
 private logging(text, type = "debug") {
     if (settings.logging == "true") {
         log."$type" text
@@ -309,6 +403,24 @@ private crcEncap(physicalgraph.zwave.Command cmd) {
     zwave.crc16EncapV1.crc16Encap().encapsulate(cmd).format()
 }
 
+private multiEncap(physicalgraph.zwave.Command cmd, Integer ep) {
+    logging("${device.displayName} - encapsulating command using MultiChannel Encapsulation, ep: $ep command: $cmd","info")
+    zwave.multiChannelV3.multiChannelCmdEncap(destinationEndPoint:ep).encapsulate(cmd)
+}
+
+private encap(physicalgraph.zwave.Command cmd, Integer ep) {
+    encap(multiEncap(cmd, ep))
+}
+
+private encap(List encapList) {
+    encap(encapList[0], encapList[1])
+}
+
+private encap(Map encapMap) {
+    encap(encapMap.cmd, encapMap.ep)
+}
+
+
 private encap(physicalgraph.zwave.Command cmd) {
     if (zwaveInfo.zw.contains("s")) {
         secEncap(cmd)
@@ -322,6 +434,10 @@ private encap(physicalgraph.zwave.Command cmd) {
 
 private encapSequence(cmds, Integer delay=250) {
     delayBetween(cmds.collect{ encap(it) }, delay)
+}
+
+private encapSequence(cmds, Integer delay, Integer ep) {
+    delayBetween(cmds.collect{ encap(it, ep) }, delay)
 }
 
 private List intToParam(Long value, Integer size = 1) {
@@ -338,20 +454,17 @@ private List intToParam(Long value, Integer size = 1) {
 ##########################
 */
 private Map cmdVersions() {
-    [0x5E: 2, 0x22: 1, 0x59: 1, 0x56: 1, 0x7A: 1, 0x32: 3, 0x71: 1, 0x73: 1, 0x98: 1, 0x31: 5, 0x85: 2, 0x70: 2, 0x72: 2, 0x5A: 1, 0x8E: 2, 0x25: 1, 0x86: 2] //Fibaro Wall Plug ZW5
+    [0x5E: 2, 0x22 :1, 0x56: 1, 0x59: 2, 0x7A: 4 ,0x32: 3, 0x71: 8, 0x73: 1, 0x98: 1, 0x85: 2, 0x70: 2, 0x72: 2, 0x5A: 1, 0x8E: 2, 0x25: 1, 0x86: 2, 0x55: 2, 0x9F: 1, 0x75: 1, 0x60: 3, 0x6C: 1, 0x20: 1]
 }
 
 private parameterMap() {[
-        [key: "alwaysActive", num: 1, size: 1, type: "enum", options: [0: "function inactive", 1: "function activated"], def: "0", title: "Always On function",
-         descr: "Turns the Wall Plug into a power and energy meter. Wall Plug will turn on connected device permanently and will stop reacting to attempts of turning it off."],
-        [key: "restoreState", num: 2, size: 1, type: "enum", options: [0: "device remains switched off", 1: "device restores the state"], def: "1", title: "Device restores the state before the power failure",
-         descr: "After the power supply is back on, the Wall Plug can be restored to previous state or remain switched off."],
-        [key: "overloadSafety", num: 3, size: 2, type: "number", def: 0, min: 0, max: 30000 , title: "Overload safety switch",
-         descr: "Allows to turn off the controlled device in case of exceeding the defined power; 1-3000 W.\n0 - function inactive\n10-30000 (1.0-3000.0W, step 0.1W)"],
+
+        [key: "restoreState", num: 2, size: 1, type: "enum", options: [0: "device remains switched off", 1: "device restores the state"], def: "0", title: "Restore state after power failure",
+         descr: "After the power supply is back on, the Wall Plug can be restored to previous state or remain switched off.", defValDescr: "Device remains switched off (Default)"],
+        [key: "overloadSafety", num: 3, size: 2, type: "number", def: 0, min: 0, max: 18000 , title: "Overload safety switch",
+         descr: "Allows to turn off the controlled device in case of exceeding the defined power;\n0 - function inactive\n10-18000 (1.0-1800.0W, step 0.1W)\n To calculate the value of parameter, multiply the power in Watts by 10 for example: 50 W x 10 = 500 Where: 50 W – the power of device connected to Wall Plug; 500 - value of parameter."],
         [key: "standardPowerReports", num: 11, size: 1, type: "number", def: 15, min: 1, max: 100, title: "Standard power reports",
          descr: "This parameter determines the minimum percentage change in active power that will result in sending a power report.\n1-99 - power change in percent\n100 - reports are disabled"],
-        [key: "powerReportFrequency", num: 12, size: 2, type: "number", def: 30, min: 5, max: 600, title: "Power reporting interval",
-         descr: "Time interval of sending at most 5 standard power reports.\n5-600 (in seconds)"],
         [key: "periodicReports", num: 14, size: 2, type: "number", def: 3600, min: 0, max: 32400, title: "Periodic power and energy reports",
          descr: "Time period between independent reports.\n0 - periodic reports inactive\n5-32400 (in seconds)"],
         [key: "ringColorOn", num: 41, size: 1, type: "enum", options: [
@@ -365,7 +478,7 @@ private parameterMap() {[
                 7: "Yellow",
                 8: "Cyan",
                 9: "Magenta"
-        ], def: "1", title: "Ring LED color when ON", descr: "Ring LED colour when the device is ON."],
+        ], def: "1", title: "Ring LED color when on", descr: "Ring LED colour when the device is ON.", defValDescr: "Load based - continuous (Default)"],
         [key: "ringColorOff", num: 42, size: 1, type: "enum", options: [
                 0: "Off",
                 1: "Last measured power",
@@ -376,5 +489,5 @@ private parameterMap() {[
                 7: "Yellow",
                 8: "Cyan",
                 9: "Magenta"
-        ], def: "0", title: "Ring LED color when OFF", descr: "Ring LED colour when the device is OFF."]
+        ], def: "0", title: "Ring LED color when off", descr: "Ring LED colour when the device is OFF.", defValDescr: "Off (Default)"]
 ]}

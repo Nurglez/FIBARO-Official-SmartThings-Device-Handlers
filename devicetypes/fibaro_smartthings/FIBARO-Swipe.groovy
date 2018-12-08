@@ -14,7 +14,7 @@
 def buttons = ["up","down","clockwise","left","right","counterClockwise"]
 
 metadata {
-    definition (name: "Fibaro Swipe ZW5", namespace: "FibarGroup", author: "Fibar Group") {
+    definition (name: "Fibaro Swipe ZW5", namespace: "fibaro_smartthings", author: "Fibar Group") {
         capability "Actuator"
         capability "Battery"
         capability "Button"

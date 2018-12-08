@@ -12,7 +12,7 @@
  *
  */
 metadata {
-    definition (name: "Fibaro CO Sensor ZW5", namespace: "FibarGroup", author: "Fibar Group") {
+    definition (name: "Fibaro CO Sensor ZW5", namespace: "fibaro_smartthings", author: "Fibar Group") {
         capability "Carbon Monoxide Detector"
         capability "Tamper Alert"
         capability "Temperature Measurement"

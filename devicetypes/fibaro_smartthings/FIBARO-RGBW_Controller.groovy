@@ -12,7 +12,7 @@
  *
  */
 metadata {
-    definition (name: "Fibaro RGBW Controller", namespace: "FibarGroup", author: "Fibar Group") {
+    definition (name: "Fibaro RGBW Controller", namespace: "fibaro_smartthings", author: "Fibar Group") {
         capability "Switch"
         capability "Power Meter"
         capability "Configuration"

@@ -12,7 +12,7 @@
  *
  */
 metadata {
-    definition (name: "Fibaro Wall Plug USB", namespace: "FibarGroup", author: "Fibar Group") {
+    definition (name: "Fibaro Wall Plug USB", namespace: "fibargroup", author: "Fibar Group") {
         capability "Energy Meter"
         capability "Power Meter"
         capability "Configuration"

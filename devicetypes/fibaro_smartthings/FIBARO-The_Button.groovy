@@ -12,7 +12,7 @@
  *
  */
 metadata {
-    definition (name: "Fibaro The Button ZW5", namespace: "FibarGroup", author: "Fibar Group") {
+    definition (name: "Fibaro The Button ZW5", namespace: "fibaro_smartthings", author: "Fibar Group") {
         capability "Actuator"
         capability "Button"
         capability "Switch"

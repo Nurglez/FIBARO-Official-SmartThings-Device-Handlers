@@ -1,5 +1,5 @@
 /**
- *  FIBARO Single Switch 2
+ *  FIBARO Double Switch 2
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -12,7 +12,7 @@
  *
  */
 metadata {
-    definition (name: "Fibaro Single Switch 2 ZW5", namespace: "FibarGroup", author: "Fibar Group") {
+    definition (name: "Fibaro Double Switch 2 ZW5", namespace: "fibaro_smartthings", author: "Fibar Group") {
         capability "Switch"
         capability "Energy Meter"
         capability "Power Meter"
@@ -22,7 +22,7 @@ metadata {
 
         command "reset"
         command "refresh"
-        fingerprint mfr: "010F", prod: "0403"
+        fingerprint mfr: "010F", prod: "0203"
         fingerprint deviceId: "0x1001", inClusters:"0x5E,0x86,0x72,0x59,0x73,0x22,0x56,0x32,0x71,0x98,0x7A,0x25,0x5A,0x85,0x70,0x8E,0x60,0x75,0x5B"
         fingerprint deviceId: "0x1001", inClusters:"0x5E,0x86,0x72,0x59,0x73,0x22,0x56,0x32,0x71,0x7A,0x25,0x5A,0x85,0x70,0x8E,0x60,0x75,0x5B"
     }
@@ -30,21 +30,21 @@ metadata {
     tiles (scale: 2) {
         multiAttributeTile(name:"switch", type: "lighting", width: 3, height: 4){
             tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
-                attributeState "off", label: '', action: "switch.on", icon: "https://s3-eu-west-1.amazonaws.com/fibaro-smartthings/switch/switch_2.png", backgroundColor: "#ffffff", nextState:"turningOn"
-                attributeState "on", label: '', action: "switch.off", icon: "https://s3-eu-west-1.amazonaws.com/fibaro-smartthings/switch/switch_1.png", backgroundColor: "#00a0dc", nextState:"turningOff"
+                attributeState "off", label: '', action: "switch.on", icon: "https://s3-eu-west-1.amazonaws.com/fibaro-smartthings/switch/switch_2.png", backgroundColor: "#ffffff"
+                attributeState "on", label: '', action: "switch.off", icon: "https://s3-eu-west-1.amazonaws.com/fibaro-smartthings/switch/switch_1.png", backgroundColor: "#00a0dc"
             }
             tileAttribute("device.multiStatus", key:"SECONDARY_CONTROL") {
                 attributeState("multiStatus", label:'${currentValue}')
             }
         }
         valueTile("power", "device.power", decoration: "flat", width: 2, height: 2) {
-            state "power", label:'${currentValue}\nW', action:"refresh"
+            state "power", label:'${currentValue}\n W', action:"refresh"
         }
         valueTile("energy", "device.energy", decoration: "flat", width: 2, height: 2) {
-            state "energy", label:'${currentValue}\nkWh', action:"refresh"
+            state "energy", label:'${currentValue}\n kWh', action:"refresh"
         }
         valueTile("reset", "device.energy", decoration: "flat", width: 2, height: 2) {
-            state "reset", label:'reset\nkWh', action:"reset"
+            state "reset", label:'reset\n kWh', action:"reset"
         }
         standardTile("main", "device.switch", decoration: "flat", canChangeIcon: true) {
             state "off", label: 'off', action: "switch.on", icon: "https://s3-eu-west-1.amazonaws.com/fibaro-smartthings/switch/switch_2.png", backgroundColor: "#ffffff"
@@ -56,7 +56,7 @@ metadata {
 
     preferences {
         input (
-                title: "Fibaro Single Switch 2 ZW5 manual",
+                title: "Fibaro Double Switch 2 ZW5 manual",
                 description: "Tap to view the manual.",
                 image: "http://manuals.fibaro.com/wp-content/uploads/2016/08/switch2_icon.jpg",
                 url: "http://manuals.fibaro.com/content/manuals/en/FGS-2x3/FGS-2x3-EN-T-v1.2.pdf",
@@ -88,79 +88,99 @@ metadata {
     }
 }
 
-//UI and tile functions
-private getPrefsFor(String name) {
-    parameterMap().findAll( {it.key.contains(name)} ).each {
-        input (
-                name: it.key,
-                title: "${it.num}. ${it.title}",
-                description: it.descr,
-                type: it.type,
-                options: it.options,
-                range: (it.min != null && it.max != null) ? "${it.min}..${it.max}" : null,
-                defaultValue: it.def,
-                required: false
-        )
-    }
-}
-
 def on() {
-    encap(zwave.basicV1.basicSet(value: 255))
+    encap(zwave.basicV1.basicSet(value: 255),1)
 }
 
 def off() {
-    encap(zwave.basicV1.basicSet(value: 0))
+    encap(zwave.basicV1.basicSet(value: 0),1)
+}
+
+def childOn() {
+    sendHubCommand(response(encap(zwave.basicV1.basicSet(value: 255),2)))
+}
+
+def childOff() {
+    sendHubCommand(response(encap(zwave.basicV1.basicSet(value: 0),2)))
 }
 
 def reset() {
     def cmds = []
-    cmds << zwave.meterV3.meterReset()
-    cmds << zwave.meterV3.meterGet(scale: 0)
-    cmds << zwave.meterV3.meterGet(scale: 2)
+    cmds << [zwave.meterV3.meterReset(), 1]
+    cmds << [zwave.meterV3.meterGet(scale: 0), 1]
+    cmds << [zwave.meterV3.meterGet(scale: 2), 1]
     encapSequence(cmds,1000)
+}
+
+def childReset() {
+    def cmds = []
+    cmds << response(encap(zwave.meterV3.meterReset(), 2))
+    cmds << response(encap(zwave.meterV3.meterGet(scale: 0), 2))
+    cmds << response(encap(zwave.meterV3.meterGet(scale: 2), 2))
+    sendHubCommand(cmds,1000)
 }
 
 def refresh() {
     def cmds = []
-    cmds << zwave.meterV3.meterGet(scale: 0)
-    cmds << zwave.meterV3.meterGet(scale: 2)
+    cmds << [zwave.meterV3.meterGet(scale: 0), 1]
+    cmds << [zwave.meterV3.meterGet(scale: 2), 1]
     encapSequence(cmds,1000)
 }
 
+def childRefresh() {
+    def cmds = []
+    cmds << response(encap(zwave.meterV3.meterGet(scale: 0), 2))
+    cmds << response(encap(zwave.meterV3.meterGet(scale: 2), 2))
+    sendHubCommand(cmds,1000)
+}
+
+def setState(String key, Integer value) {
+    state."$key".value = value
+}
+
+Integer getState(String key) {
+    state."$key".value
+}
+
 //Configuration and synchronization
+
 def updated() {
     if ( state.lastUpdated && (now() - state.lastUpdated) < 500 ) return
     def cmds = []
-    logging("Executing updated()","info")
-
+    logging("${device.displayName} - Executing updated()","info")
+    if (!childDevices) {
+        createChildDevices()
+    }
     if (device.currentValue("numberOfButtons") != 6) { sendEvent(name: "numberOfButtons", value: 6) }
 
+    cmds << zwave.multiChannelAssociationV2.multiChannelAssociationGet(groupingIdentifier: 1) //verify if group 1 association is correct
+
+    runIn(3,"syncStart")
     state.lastUpdated = now()
-    syncStart()
+    response(encapSequence(cmds,1000))
 }
 
 private syncStart() {
     boolean syncNeeded = false
-    Integer settingValue = null
     parameterMap().each {
         if(settings."$it.key" != null) {
-            settingValue = settings."$it.key" as Integer
             if (state."$it.key" == null) { state."$it.key" = [value: null, state: "synced"] }
-            if (state."$it.key".value != settingValue || state."$it.key".state != "synced" ) {
-                state."$it.key".value = settingValue
+            if (state."$it.key".value != settings."$it.key" as Integer || state."$it.key".state in ["notSynced","inProgress"]) {
+                state."$it.key".value = settings."$it.key" as Integer
                 state."$it.key".state = "notSynced"
                 syncNeeded = true
             }
         }
     }
     if ( syncNeeded ) {
-        logging("sync needed.", "info")
+        logging("${device.displayName} - starting sync.", "info")
+        multiStatusEvent("Sync in progress.", true, true)
         syncNext()
     }
 }
 
 private syncNext() {
-    logging("Executing syncNext()","info")
+    logging("${device.displayName} - Executing syncNext()","info")
     def cmds = []
     for ( param in parameterMap() ) {
         if ( state."$param.key"?.value != null && state."$param.key"?.state in ["notSynced","inProgress"] ) {
@@ -173,6 +193,7 @@ private syncNext() {
     }
     if (cmds) {
         runIn(10, "syncCheck")
+        log.debug "cmds!"
         sendHubCommand(cmds,1000)
     } else {
         runIn(1, "syncCheck")
@@ -180,7 +201,7 @@ private syncNext() {
 }
 
 private syncCheck() {
-    logging("Executing syncCheck()","info")
+    logging("${device.displayName} - Executing syncCheck()","info")
     def failed = []
     def incorrect = []
     def notSynced = []
@@ -193,15 +214,22 @@ private syncCheck() {
             notSynced << it
         }
     }
-
     if (failed) {
-        multiStatusEvent("Sync failed! Verify parameter: ${failed[0].num}", true, true)
+        logging("${device.displayName} - Sync failed! Check parameter: ${failed[0].num}","info")
+        sendEvent(name: "syncStatus", value: "failed")
+        multiStatusEvent("Sync failed! Check parameter: ${failed[0].num}", true, true)
     } else if (incorrect) {
-        multiStatusEvent("Sync mismatch! Verify parameter: ${incorrect[0].num}", true, true)
+        logging("${device.displayName} - Sync mismatch! Check parameter: ${incorrect[0].num}","info")
+        sendEvent(name: "syncStatus", value: "incomplete")
+        multiStatusEvent("Sync mismatch! Check parameter: ${incorrect[0].num}", true, true)
     } else if (notSynced) {
+        logging("${device.displayName} - Sync incomplete!","info")
+        sendEvent(name: "syncStatus", value: "incomplete")
         multiStatusEvent("Sync incomplete! Open settings and tap Done to try again.", true, true)
     } else {
-        if (device.currentValue("multiStatus")?.contains("Sync")) { multiStatusEvent("Sync OK.", true, true) }
+        logging("${device.displayName} - Sync Complete","info")
+        sendEvent(name: "syncStatus", value: "synced")
+        multiStatusEvent("Sync OK.", true, true)
     }
 }
 
@@ -211,16 +239,29 @@ private multiStatusEvent(String statusValue, boolean force = false, boolean disp
     }
 }
 
-//event handlers related to configuration and sync
 def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport cmd) {
     def paramKey = parameterMap().find( {it.num == cmd.parameterNumber } ).key
-    logging("Parameter ${paramKey} value is ${cmd.scaledConfigurationValue} expected " + state."$paramKey".value, "info")
+    logging("${device.displayName} - Parameter ${paramKey} value is ${cmd.scaledConfigurationValue} expected " + state."$paramKey".value, "info")
     state."$paramKey".state = (state."$paramKey".value == cmd.scaledConfigurationValue) ? "synced" : "incorrect"
     syncNext()
 }
 
+private createChildDevices() {
+    logging("${device.displayName} - executing createChildDevices()","info")
+    addChildDevice(
+            "Fibaro Double Switch 2 - USB",
+            "${device.deviceNetworkId}-2",
+            null,
+            [completedSetup: true, label: "${device.displayName} (CH2)", isComponent: false, componentName: "ch2", componentLabel: "Channel 2"]
+    )
+}
+
+private physicalgraph.app.ChildDeviceWrapper getChild(Integer childNum) {
+    return childDevices.find({ it.deviceNetworkId == "${device.deviceNetworkId}-${childNum}" })
+}
+
 def zwaveEvent(physicalgraph.zwave.commands.applicationstatusv1.ApplicationRejectedRequest cmd) {
-    logging("rejected request!","warn")
+    logging("${device.displayName} - rejected request!","warn")
     for ( param in parameterMap() ) {
         if ( state."$param.key"?.state == "inProgress" ) {
             state."$param.key"?.state = "failed"
@@ -229,27 +270,66 @@ def zwaveEvent(physicalgraph.zwave.commands.applicationstatusv1.ApplicationRejec
     }
 }
 
+def zwaveEvent(physicalgraph.zwave.commands.multichannelassociationv2.MultiChannelAssociationReport cmd) {
+    def cmds = []
+    if (cmd.groupingIdentifier == 1) {
+        if (cmd.nodeId != [0, zwaveHubNodeId, 1]) {
+            log.debug "${device.displayName} - incorrect MultiChannel Association for Group 1! nodeId: ${cmd.nodeId} will be changed to [0, ${zwaveHubNodeId}, 1]"
+            cmds << zwave.multiChannelAssociationV2.multiChannelAssociationRemove(groupingIdentifier: 1)
+            cmds << zwave.multiChannelAssociationV2.multiChannelAssociationSet(groupingIdentifier: 1, nodeId: [0,zwaveHubNodeId,1])
+        } else {
+            logging("${device.displayName} - MultiChannel Association for Group 1 correct.","info")
+        }
+    }
+    if (cmds) { [response(encapSequence(cmds, 1000))] }
+}
+
 //event handlers
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
     //ignore
 }
 
-def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
-    logging("SwitchBinaryReport received, value: ${cmd.value} ","info")
-    sendEvent([name: "switch", value: (cmd.value == 0 ) ? "off": "on"])
+def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep=null) {
+    logging("${device.displayName} - SwitchBinaryReport received, value: ${cmd.value} ep: $ep","info")
+    switch (ep) {
+        case 1:
+            sendEvent([name: "switch", value: (cmd.value == 0 ) ? "off": "on"])
+            break
+        case 2:
+            getChild(2)?.sendEvent([name: "switch", value: (cmd.value == 0 ) ? "off": "on"])
+            break
+    }
 }
 
-def zwaveEvent(physicalgraph.zwave.commands.meterv3.MeterReport cmd) {
-    logging("MeterReport received, value: ${cmd.scaledMeterValue} scale: ${cmd.scale} ","info")
-    switch (cmd.scale) {
-        case 0: sendEvent([name: "energy", value: cmd.scaledMeterValue, unit: "kWh"]); break;
-        case 2: sendEvent([name: "power", value: cmd.scaledMeterValue, unit: "W"]); break;
+def zwaveEvent(physicalgraph.zwave.commands.meterv3.MeterReport cmd, ep=null) {
+    logging("${device.displayName} - MeterReport received, value: ${cmd.scaledMeterValue} scale: ${cmd.scale} ep: $ep","info")
+    if (ep==1) {
+        switch (cmd.scale) {
+            case 0:
+                sendEvent([name: "energy", value: cmd.scaledMeterValue, unit: "kWh"])
+                break
+            case 2:
+                sendEvent([name: "power", value: cmd.scaledMeterValue, unit: "W"])
+                break
+        }
+        multiStatusEvent("${(device.currentValue("power") ?: "0.0")} W | ${(device.currentValue("energy") ?: "0.00")} kWh")
+
+    } else if (ep==2) {
+        switch (cmd.scale) {
+            case 0:
+                getChild(2)?.sendEvent([name: "energy", value: cmd.scaledMeterValue, unit: "kWh"])
+                break
+            case 2:
+                getChild(2)?.sendEvent([name: "power", value: cmd.scaledMeterValue, unit: "W"])
+                break
+        }
+        getChild(2)?.sendEvent([name: "combinedMeter", value: "${(getChild(2)?.currentValue("power") ?: "0.0")} W / ${(getChild(2)?.currentValue("energy") ?: "0.00")} kWh", displayed: false])
     }
-    multiStatusEvent("${(device.currentValue("power") ?: "0.0")} W | ${(device.currentValue("energy") ?: "0.00")} kWh")
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.centralscenev1.CentralSceneNotification cmd) {
-    logging("CentralSceneNotification received, sceneNumber: ${cmd.sceneNumber} keyAttributes: ${cmd.keyAttributes}","info")
+    logging("${device.displayName} - CentralSceneNotification received, sceneNumber: ${cmd.sceneNumber} keyAttributes: ${cmd.keyAttributes}","info")
+    log.info cmd
     def String action
     def Integer button
     switch (cmd.keyAttributes as Integer) {
@@ -259,6 +339,7 @@ def zwaveEvent(physicalgraph.zwave.commands.centralscenev1.CentralSceneNotificat
         case 3: action = "pushed"; button = 2+(cmd.sceneNumber as Integer); break
         case 4: action = "pushed"; button = 4+(cmd.sceneNumber as Integer); break
     }
+    log.info "button $button $action"
     sendEvent(name: "button", value: action, data: [buttonNumber: button], isStateChange: true)
 }
 
@@ -269,7 +350,7 @@ def zwaveEvent(physicalgraph.zwave.commands.centralscenev1.CentralSceneNotificat
 */
 def parse(String description) {
     def result = []
-    logging("Parsing: ${description}")
+    logging("${device.displayName} - Parsing: ${description}")
     if (description.startsWith("Err 106")) {
         result = createEvent(
                 descriptionText: "Failed to complete the network security key exchange. If you are unable to receive data from it, you must remove it from your network and add it again.",
@@ -283,7 +364,7 @@ def parse(String description) {
     } else {
         def cmd = zwave.parse(description, cmdVersions())
         if (cmd) {
-            logging("Parsed: ${cmd}")
+            logging("${device.displayName} - Parsed: ${cmd}")
             zwaveEvent(cmd)
         }
     }
@@ -292,10 +373,10 @@ def parse(String description) {
 def zwaveEvent(physicalgraph.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
     def encapsulatedCommand = cmd.encapsulatedCommand(cmdVersions())
     if (encapsulatedCommand) {
-        logging("Parsed SecurityMessageEncapsulation into: ${encapsulatedCommand}")
+        logging("${device.displayName} - Parsed SecurityMessageEncapsulation into: ${encapsulatedCommand}")
         zwaveEvent(encapsulatedCommand)
     } else {
-        logging("Unable to extract Secure command from $cmd","warn")
+        log.warn "Unable to extract Secure command from $cmd"
     }
 }
 
@@ -304,41 +385,41 @@ def zwaveEvent(physicalgraph.zwave.commands.crc16encapv1.Crc16Encap cmd) {
     def ccObj = version ? zwave.commandClass(cmd.commandClass, version) : zwave.commandClass(cmd.commandClass)
     def encapsulatedCommand = ccObj?.command(cmd.command)?.parse(cmd.data)
     if (encapsulatedCommand) {
-        logging("Parsed Crc16Encap into: ${encapsulatedCommand}")
+        logging("${device.displayName} - Parsed Crc16Encap into: ${encapsulatedCommand}")
         zwaveEvent(encapsulatedCommand)
     } else {
-        logging("Unable to extract CRC16 command from $cmd","warn")
+        log.warn "Unable to extract CRC16 command from $cmd"
     }
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
     def encapsulatedCommand = cmd.encapsulatedCommand(cmdVersions())
     if (encapsulatedCommand) {
-        logging("Parsed MultiChannelCmdEncap ${encapsulatedCommand}")
+        logging("${device.displayName} - Parsed MultiChannelCmdEncap ${encapsulatedCommand}")
         zwaveEvent(encapsulatedCommand, cmd.sourceEndPoint as Integer)
     } else {
-        logging("Unable to extract MultiChannel command from $cmd","warn")
+        log.warn "Unable to extract MultiChannel command from $cmd"
     }
 }
 
 private logging(text, type = "debug") {
-    if (settings.logging == "true" || type == "warn") {
-        log."$type" "${device.displayName} - $text"
+    if (settings.logging == "true") {
+        log."$type" text
     }
 }
 
 private secEncap(physicalgraph.zwave.Command cmd) {
-    logging("encapsulating command using Secure Encapsulation, command: $cmd","info")
+    logging("${device.displayName} - encapsulating command using Secure Encapsulation, command: $cmd","info")
     zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
 }
 
 private crcEncap(physicalgraph.zwave.Command cmd) {
-    logging("encapsulating command using CRC16 Encapsulation, command: $cmd","info")
+    logging("${device.displayName} - encapsulating command using CRC16 Encapsulation, command: $cmd","info")
     zwave.crc16EncapV1.crc16Encap().encapsulate(cmd).format()
 }
 
 private multiEncap(physicalgraph.zwave.Command cmd, Integer ep) {
-    logging("encapsulating command using MultiChannel Encapsulation, ep: $ep command: $cmd","info")
+    logging("${device.displayName} - encapsulating command using MultiChannel Encapsulation, ep: $ep command: $cmd","info")
     zwave.multiChannelV3.multiChannelCmdEncap(destinationEndPoint:ep).encapsulate(cmd)
 }
 
@@ -360,7 +441,7 @@ private encap(physicalgraph.zwave.Command cmd) {
     } else if (zwaveInfo.cc.contains("56")){
         crcEncap(cmd)
     } else {
-        logging("no encapsulation supported for command: $cmd","info")
+        logging("${device.displayName} - no encapsulation supported for command: $cmd","info")
         cmd.format()
     }
 }
@@ -387,7 +468,7 @@ private List intToParam(Long value, Integer size = 1) {
 ##########################
 */
 private Map cmdVersions() {
-    [0x5E: 1, 0x86: 1, 0x72: 1, 0x59: 1, 0x73: 1, 0x22: 1, 0x56: 1, 0x32: 3, 0x71: 1, 0x98: 1, 0x7A: 1, 0x25: 1, 0x5A: 1, 0x85: 2, 0x70: 2, 0x8E: 2, 0x60: 3, 0x75: 1, 0x5B: 1] //Fibaro Single Switch 2
+    [0x5E: 1, 0x86: 1, 0x72: 1, 0x59: 1, 0x73: 1, 0x22: 1, 0x56: 1, 0x32: 3, 0x71: 1, 0x98: 1, 0x7A: 1, 0x25: 1, 0x5A: 1, 0x85: 2, 0x70: 2, 0x8E: 2, 0x60: 3, 0x75: 1, 0x5B: 1] //Fibaro Double Switch 2
 }
 
 private parameterMap() {[
@@ -403,7 +484,7 @@ private parameterMap() {[
                 3: "auto ON",
                 4: "auto OFF",
                 5: "flashing mode"
-        ], def: "0", title: "Operating mode",
+        ], def: "0", title: "First channel - Operating mode",
          descr: "This parameter allows to choose operating for the 1st channel controlled by the S1 switch."],
         [key: "ch1reactionToSwitch", num: 11, size: 1, type: "enum", options: [
                 0: "cancel and set target state",
@@ -411,7 +492,7 @@ private parameterMap() {[
                 2: "reset timer"
         ], def: "0", title: "Reaction to switch for delay/auto ON/OFF modes",
          descr: "This parameter determines how the device in timed mode reacts to pushing the switch connected to the S1 terminal."],
-        [key: "ch1timeParameter", num: 12, size: 2, type: "number", def: 50, min: 0, max: 32000, title: "Time parameter for delay/auto ON/OFF modes",
+        [key: "ch1timeParameter", num: 12, size: 2, type: "number", def: 50, min: 0, max: 32000, title: "First channel - Time parameter for delay/auto ON/OFF modes",
          descr: "This parameter allows to set time parameter used in timed modes. (1-32000s)"],
         [key: "ch1pulseTime", num: 13, size: 2, type: "enum", options: [
                 1: "0.1 s",
@@ -430,6 +511,41 @@ private parameterMap() {[
                 600: "60 s",
                 6000: "600 s"
         ], def: 5, min: 1, max: 32000, title: "First channel - Pulse time for flashing mode",
+         descr: "This parameter allows to set time of switching to opposite state in flashing mode."],
+        [key: "ch2operatingMode", num: 15, size: 1, type: "enum", options: [
+                0: "standard operation",
+                1: "delay ON",
+                2: "delay OFF",
+                3: "auto ON",
+                4: "auto OFF",
+                5: "flashing mode"
+        ], def: "0", title: "Second channel - Operating mode",
+         descr: "This parameter allows to choose operating for the 1st channel controlled by the S2 switch."],
+        [key: "ch2reactionToSwitch", num: 16, size: 1, type: "enum", options: [
+                0: "cancel and set target state",
+                1: "no reaction",
+                2: "reset timer"
+        ], def: "0", title: "Second channel - Restore state after power failure",
+         descr: "This parameter determines how the device in timed mode reacts to pushing the switch connected to the S2 terminal."],
+        [key: "ch2timeParameter", num: 17, size: 2, type: "number", def: 50, min: 0, max: 32000, title: "Second channel - Time parameter for delay/auto ON/OFF modes",
+         descr: "This parameter allows to set time parameter used in timed modes."],
+        [key: "ch2pulseTime", num: 18, size: 2, type: "enum", options: [
+                1: "0.1 s",
+                5: "0.5 s",
+                10: "1 s",
+                20: "2 s",
+                30: "3 s",
+                40: "4 s",
+                50: "5 s",
+                60: "6 s",
+                70: "7 s",
+                80: "8 s",
+                90: "9 s",
+                100: "10 s",
+                300: "30 s",
+                600: "60 s",
+                6000: "600 s"
+        ], def: 5, min: 1, max: 32000, title: "Second channel - Pulse time for flashing mode",
          descr: "This parameter allows to set time of switching to opposite state in flashing mode."],
         [key: "switchType", num: 20, size: 1, type: "enum", options: [
                 0: "momentary switch",
@@ -487,7 +603,16 @@ private parameterMap() {[
                 100: "1 kWh",
                 500: "5 kWh",
                 1000: "10 kWh"
-        ], def: 100, min: 0, max: 32000, title: "Energy reports",
+        ], def: 100, min: 0, max: 32000, title: "First channel - energy reports",
+         descr: "This parameter determines the min. change in consumed power that will result in sending power report"],
+        [key: "ch2energyReports", num: 57, size: 2, type: "enum", options: [
+                1: "0.01 kWh",
+                10: "0.1 kWh",
+                50: "0.5 kWh",
+                100: "1 kWh",
+                500: "5 kWh",
+                1000: "10 kWh"
+        ], def: 100, min: 0, max: 32000, title: "Second channel - energy reports",
          descr: "This parameter determines the min. change in consumed power that will result in sending power report"],
         [key: "periodicPowerReports", num: 58, size: 2, type: "enum", options: [
                 1: "1 s",

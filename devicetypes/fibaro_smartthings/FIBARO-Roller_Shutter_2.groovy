@@ -12,7 +12,7 @@
  *
  */
 metadata {
-    definition (name: "Fibaro Roller Shutter 2", namespace: "SmartThings", author: "Fibar Group") {
+    definition (name: "Fibaro Roller Shutter 2", namespace: "fibaro_smartthings", author: "Fibar Group") {
         capability "Window Shade"        
         capability "Energy Meter"
         capability "Power Meter"

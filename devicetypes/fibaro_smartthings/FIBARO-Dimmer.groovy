@@ -12,7 +12,7 @@
  *
  */
 metadata {
-    definition (name: "Fibaro Dimmer 2 ZW5", namespace: "FibarGroup", author: "Fibar Group") {
+    definition (name: "Fibaro Dimmer 2 ZW5", namespace: "fibaro_smartthings", author: "Fibar Group") {
         capability "Switch"
         capability "Switch Level"
         capability "Energy Meter"
